@@ -1,9 +1,9 @@
 #!/usr/bin ruby
 # 
 # Lisp parser.
+# Port and inspiration of http://norvig.com/lispy.html.
+#
 # Author: @_ty
-
-Sym = String
 
 class Env < Hash
   def initialize(outer=nil)
@@ -17,7 +17,7 @@ class Env < Hash
     return @outer.search(var)
   end
 
-private
+  private
 
   def add_globals
     globals = {
@@ -30,7 +30,7 @@ end
 # Evaluate an expression in an environ
 def eeval(x)
   env = Env.new
-  if x.is_a? Sym # Variable reference
+  if x.is_a? String # Variable reference
     env.search(x)[x]
   elsif not x.is_a? Object # Constant literal
 
@@ -54,15 +54,15 @@ def read_from(tokens)
   if tokens.length == 0
     raise SyntaxError, 'Bad syntax'
   end
-
-  token = tokens.pop(0)
+  
+  token = tokens.slice!(0)
 
   if '(' == token
     l = []
     while tokens[0] != ')'
       l << read_from(tokens)
     end
-    tokens.pop(0) # pop off ')'
+    tokens.slice!(0) # pop off ')'
     return l
   elsif ')' == token
     raise SyntaxError, 'unexpected )'
@@ -73,12 +73,17 @@ end
 
 # Numbers become numbers; every other token is a symbol.
 def atom(token)
-  if token.respond_to? :to_i
-    token.to_i
-  elsif token.respond_to? :to_f
-    token.to_f
-  else
-    token.to_s
+  # Try converting to integer
+  begin
+    Integer(token)
+  rescue
+    # Try converting to float
+    begin
+      Float(token)
+    rescue
+      # Non-float, non-int, it's a string
+      token
+    end
   end
 end
 
@@ -86,14 +91,19 @@ def repl
   loop do
     print 'lisp.rb> '
 
+    # Handle user input exceptions
     begin
       line = $stdin.gets.chomp
     rescue NoMethodError, Interrupt
       exit
     end
     
-    puts line
-    puts parse(line)
+    # Handle parsing exceptions
+    begin
+      print parse(line)
+    rescue Exception
+      print ''
+    end
 
     # val = eeval(parse(line))
     # if not val.nil?
