@@ -31,12 +31,21 @@ class Env < Hash
       args.each { |y| quot /= y }
       quot
     end,
+    'fact' => lambda do |x|
+      o = 0
+      if x <= 1
+        o = 1
+      else
+        o += (x * @@globals['fact'].call(x - 1))
+      end
+      o
+    end,
     '>' => lambda { |x, y| x > y },
     '>=' => lambda { |x, y| x >= y },
     '<' => lambda { |x, y| x < y },
     '<=' => lambda { |x, y| x <= y },
     '=' => lambda { |x, y| x == y },
-    'equal?' => lambda { |x, y| x == y },
+    'equal?' => lambda { |x, y| @@globals['='].call(x, y) },
     'null?' => lambda { |x| x.nil? },
     'nil?' => lambda { |x| x.nil? },
     'true' => true,
@@ -44,7 +53,17 @@ class Env < Hash
   }
   
   def initialize(params=[], args=[], outer=nil)
-    params.zip(args)
+    merged = {}
+    params.each_with_index do |v, k|
+      if args[k].nil?
+        raise Exception, 'Unknown parse error!'
+      else
+        merged[v] = args[k]
+      end
+    end
+    
+    self.merge!(merged)
+
     @outer = outer
     merge_globals()
   end
@@ -79,9 +98,17 @@ class Lisp
   
   # Evaluate an expression in an environ
   def eval(x, env = @env)
+    # This is just a crude way to see what
+    # variables are in the scope.
     # eg: (env)
     if x[0] == 'env'
-      env.each { |k, v| print "#{k}\n" }
+      env.each do |k, v|
+        if v.is_a? Proc
+          print "#" + k + "\n"
+        else
+          print k + "\n"
+        end
+      end
       nil
     # eg: true
     elsif x.is_a? String # Variable reference
@@ -108,7 +135,7 @@ class Lisp
     elsif x[0] == 'define'
       (_, var, exp) = x
       env[var] = self.eval(exp, env)
-    # eg: (set! square (lambda (x) (* x x))) (square 2)
+    # eg: (set! square (lambda (x) (* 2 x))) (square 2)
     elsif x[0] == 'lambda'
       (_, vars, exp) = x
       lambda { |*args| self.eval(exp, Env.new(vars, args, env)) }
