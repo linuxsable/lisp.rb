@@ -6,36 +6,60 @@
 # Author: @_ty
 
 class Env < Hash
+  @@globals = {
+    '+' => lambda { |x, y| x + y },
+    'null?' => lambda { |x| x.nil? },
+    'PI' => Math::PI
+  }
+  
   def initialize(outer=nil)
     @outer = outer
-    add_globals()
+    merge_globals()
   end
 
   def search(var)
-    return self if not self[var].nil?
-    return nil if @outer.nil?
-    return @outer.search(var)
+    # Return the current env if the variables exists in it
+    if not self[var].nil?
+      self
+    else
+      # Return the outer env if it exists out of it
+      if not @outer.nil?
+        @outer.search(var)
+      else
+        self
+      end
+    end
   end
 
   private
 
-  def add_globals
-    globals = {
-      '+' => lambda { |x, y| x + y }
-    }
-    self.merge!(globals)
+  def merge_globals
+    self.merge!(@@globals)
   end
 end
 
+global_env = Env.new
+
 # Evaluate an expression in an environ
-def eeval(x)
-  env = Env.new
+def eeval(x, e = global_env)
   if x.is_a? String # Variable reference
     env.search(x)[x]
-  elsif not x.is_a? Object # Constant literal
-
+  elsif x.is_a? Numeric # Constant literal
+    x
+  elsif x[0] == 'quote'
+    (_, exp) = x
+  elsif x[0] == 'if'
+    (_, test, conseq, alt) = x
+    if eeval(test, env)
+      eeval(conseq, env)
+    else
+      eeval(alt, env)
+    end
+  elsif x[0] == 'set!'
+    (_, var, exp) = x
+    env.search(var)[var] = eeval(exp, env)
   else
-
+    puts 'Error!'
   end
 end
 
@@ -52,7 +76,7 @@ end
 # Read an expression from a sequence of tokens
 def read_from(tokens)
   if tokens.length == 0
-    raise SyntaxError, 'Bad syntax'
+    raise SyntaxError, 'Bad syntax.'
   end
   
   token = tokens.slice!(0)
@@ -100,15 +124,14 @@ def repl
     
     # Handle parsing exceptions
     begin
-      print parse(line)
-    rescue Exception
+      evaled = eeval(parse(line))
+      if not evaled.nil?
+        p evaled
+      end
+    rescue Exception => e
+      puts e
       print ''
     end
-
-    # val = eeval(parse(line))
-    # if not val.nil?
-    #   print 'string'
-    # end
   end
 end
 
