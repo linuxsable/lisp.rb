@@ -3,16 +3,48 @@
 # Lisp parser.
 # Port and inspiration of http://norvig.com/lispy.html.
 #
+# TODO:
+#  * Create standard libs to clean up global scope
+#  * Allow scope to point to other methods like '=' and 'equal?'
+#
 # Author: @_ty
 
 class Env < Hash
   @@globals = {
-    '+' => lambda { |x, y| x + y },
+    '+' => lambda do |*args|
+      sum = 0
+      args.each { |x| sum += x }
+      sum
+    end,
+    '-' => lambda do |x, *args|
+      diff = x
+      args.each { |y| diff -= y }
+      diff
+    end,
+    '*' => lambda do |*args|
+      prod = args.slice!(0)
+      args.each { |x| prod *= x }
+      prod
+    end,
+    '/' => lambda do |x, *args|
+      quot = x
+      args.each { |y| quot /= y }
+      quot
+    end,
+    '>' => lambda { |x, y| x > y },
+    '>=' => lambda { |x, y| x >= y },
+    '<' => lambda { |x, y| x < y },
+    '<=' => lambda { |x, y| x <= y },
+    '=' => lambda { |x, y| x == y },
+    'equal?' => lambda { |x, y| x == y },
     'null?' => lambda { |x| x.nil? },
-    'PI' => Math::PI
+    'nil?' => lambda { |x| x.nil? },
+    'true' => true,
+    'false' => false
   }
   
-  def initialize(outer=nil)
+  def initialize(params=[], args=[], outer=nil)
+    params.zip(args)
     @outer = outer
     merge_globals()
   end
@@ -38,101 +70,139 @@ class Env < Hash
   end
 end
 
-global_env = Env.new
-
-# Evaluate an expression in an environ
-def eeval(x, e = global_env)
-  if x.is_a? String # Variable reference
-    env.search(x)[x]
-  elsif x.is_a? Numeric # Constant literal
-    x
-  elsif x[0] == 'quote'
-    (_, exp) = x
-  elsif x[0] == 'if'
-    (_, test, conseq, alt) = x
-    if eeval(test, env)
-      eeval(conseq, env)
-    else
-      eeval(alt, env)
-    end
-  elsif x[0] == 'set!'
-    (_, var, exp) = x
-    env.search(var)[var] = eeval(exp, env)
-  else
-    puts 'Error!'
-  end
-end
-
-# Read a Scheme exp from a string
-def parse(s)
-  read_from(tokenize(s))
-end
-
-# Convert a string into a list of tokens
-def tokenize(str)
-  str.gsub('(',' ( ').gsub(')',' ) ').split()
-end
-
-# Read an expression from a sequence of tokens
-def read_from(tokens)
-  if tokens.length == 0
-    raise SyntaxError, 'Bad syntax.'
+class Lisp
+  def initialize
+    @env = Env.new
+    @quit_message = "Goodbye, cruel world."
+    @version = '0.1'
   end
   
-  token = tokens.slice!(0)
-
-  if '(' == token
-    l = []
-    while tokens[0] != ')'
-      l << read_from(tokens)
-    end
-    tokens.slice!(0) # pop off ')'
-    return l
-  elsif ')' == token
-    raise SyntaxError, 'unexpected )'
-  else
-    return atom(token)
-  end
-end    
-
-# Numbers become numbers; every other token is a symbol.
-def atom(token)
-  # Try converting to integer
-  begin
-    Integer(token)
-  rescue
-    # Try converting to float
-    begin
-      Float(token)
-    rescue
-      # Non-float, non-int, it's a string
-      token
-    end
-  end
-end
-
-def repl
-  loop do
-    print 'lisp.rb> '
-
-    # Handle user input exceptions
-    begin
-      line = $stdin.gets.chomp
-    rescue NoMethodError, Interrupt
-      exit
-    end
-    
-    # Handle parsing exceptions
-    begin
-      evaled = eeval(parse(line))
-      if not evaled.nil?
-        p evaled
+  # Evaluate an expression in an environ
+  def eval(x, env = @env)
+    # eg: (env)
+    if x[0] == 'env'
+      env.each { |k, v| print "#{k}\n" }
+      nil
+    # eg: true
+    elsif x.is_a? String # Variable reference
+      env.search(x)[x]
+    # eg: 12.23
+    elsif x.is_a? Numeric # Constant literal
+      x
+    # eg: (quote (1 2 3))
+    elsif x[0] == 'quote'
+      (_, exp) = x
+    # eg: (if (< 4 2) true false)
+    elsif x[0] == 'if'
+      (_, test, conseq, alt) = x
+      if self.eval(test, env)
+        self.eval(conseq, env)
+      else
+        self.eval(alt, env)
       end
-    rescue Exception => e
-      puts e
-      print ''
+    # eg: (set! pi 3.14)
+    elsif x[0] == 'set!'
+      (_, var, exp) = x
+      env.search(var)[var] = self.eval(exp, env)
+    # eg: (set! ppl 10)
+    elsif x[0] == 'define'
+      (_, var, exp) = x
+      env[var] = self.eval(exp, env)
+    # eg: (set! square (lambda (x) (* x x))) (square 2)
+    elsif x[0] == 'lambda'
+      (_, vars, exp) = x
+      lambda { |*args| self.eval(exp, Env.new(vars, args, env)) }
+    # eg: (begin (set! x 1) (set! y 2) (+ x y))
+    elsif x[0] == 'begin'
+      x.shift
+      val = nil
+      x.each { |exp| val = self.eval(exp, env) }
+      return val
+    # eg: (= 4 4)
+    else
+      exps = []
+      x.each { |exp| exps << self.eval(exp, env) }
+      procedure = exps.slice!(0)
+      procedure.call(*exps)
+    end
+  end
+  
+  # Read a Scheme exp from a string
+  def parse(s)
+    self.read_from(self.tokenize(s))
+  end
+  
+  # Convert a string into a list of tokens
+  def tokenize(str)
+    str.gsub('(',' ( ').gsub(')',' ) ').split()
+  end
+  
+  # Read an expression from a sequence of tokens
+  def read_from(tokens)
+    if tokens.length == 0
+      raise SyntaxError, 'Bad syntax.'
+    end
+
+    token = tokens.slice!(0)
+
+    if '(' == token
+      l = []
+      while tokens[0] != ')'
+        l << self.read_from(tokens)
+      end
+      tokens.slice!(0) # pop off ')'
+      return l
+    elsif ')' == token
+      raise SyntaxError, 'unexpected )'
+    else
+      return self.atom(token)
+    end
+  end
+  
+  # Numbers become numbers; every other token is a symbol.
+  def atom(token)
+    # Try converting to integer
+    begin
+      Integer(token)
+    rescue
+      # Try converting to float
+      begin
+        Float(token)
+      rescue
+        # Non-float, non-int, it's a string
+        token
+      end
+    end
+  end
+  
+  def start_repl!
+    loop do
+      print 'lisp.rb> '
+
+      # Handle user input exceptions
+      begin
+        line = $stdin.gets.chomp
+      rescue NoMethodError, Interrupt
+        exit
+      end
+
+      # Handle parsing exceptions
+      begin
+        evaled = self.eval(self.parse(line))
+        if not evaled.nil?
+          p evaled
+        end
+      rescue Exception => e
+        puts e
+        print ''
+      end
+      
+      # Quiting the REPL
+      if line =~ /^(exit|quit)$/
+        abort(@quit_message)
+      end
     end
   end
 end
 
-repl()
+Lisp.new.start_repl!
