@@ -1,0 +1,12 @@
+ty:lisp.rb linuxsable$ ruby lisp.rb 
+lisp.rb> (fact 10)
+3628800
+
+lisp.rb> (lambda (r) (* r 2))
+#<Proc:0x00000100839a18@lisp.rb:142 (lambda)>
+
+lisp.rb> (define sq (lambda (r) (* r 2)))
+#<Proc:0x00000100836c78@lisp.rb:142 (lambda)>
+
+lisp.rb> (sq 10)
+20
