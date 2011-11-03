@@ -5,7 +5,8 @@
 #
 # TODO:
 #  * Create standard libs to clean up global scope
-#  * Allow scope to point to other methods like '=' and 'equal?'
+#  * Floats are broked?
+#  * I think quotes are broked too.
 #
 # Author: @_ty
 
@@ -31,15 +32,6 @@ class Env < Hash
       args.each { |y| quot /= y }
       quot
     end,
-    'fact' => lambda do |x|
-      o = 0
-      if x <= 1
-        o = 1
-      else
-        o += (x * @@globals['fact'].call(x - 1))
-      end
-      o
-    end,
     '>' => lambda { |x, y| x > y },
     '>=' => lambda { |x, y| x >= y },
     '<' => lambda { |x, y| x < y },
@@ -49,7 +41,9 @@ class Env < Hash
     'null?' => lambda { |x| x.nil? },
     'nil?' => lambda { |x| x.nil? },
     'true' => true,
-    'false' => false
+    'false' => false,
+    'null' => nil,
+    'nil' => nil
   }
   
   def initialize(params=[], args=[], outer=nil)
@@ -99,7 +93,7 @@ class Lisp
   # Evaluate an expression in an environ
   def eval(x, env = @env)
     # This is just a crude way to see what
-    # variables are in the scope.
+    # variables are in the env.
     # eg: (env)
     if x[0] == 'env'
       env.each do |k, v|
@@ -119,6 +113,7 @@ class Lisp
     # eg: (quote (1 2 3))
     elsif x[0] == 'quote'
       (_, exp) = x
+      return exp
     # eg: (if (< 4 2) true false)
     elsif x[0] == 'if'
       (_, test, conseq, alt) = x
@@ -135,7 +130,7 @@ class Lisp
     elsif x[0] == 'define'
       (_, var, exp) = x
       env[var] = self.eval(exp, env)
-    # eg: (set! square (lambda (x) (* 2 x))) (square 2)
+    # eg: (define square (lambda (x) (* 2 x))) (square 2)
     elsif x[0] == 'lambda'
       (_, vars, exp) = x
       lambda { |*args| self.eval(exp, Env.new(vars, args, env)) }
@@ -148,7 +143,7 @@ class Lisp
     # eg: (= 4 4)
     else
       exps = []
-      x.each { |exp| exps << self.eval(exp, env) }
+      x.each { |exp| exps.push( self.eval(exp, env) ) }
       procedure = exps.slice!(0)
       procedure.call(*exps)
     end
@@ -167,7 +162,7 @@ class Lisp
   # Read an expression from a sequence of tokens
   def read_from(tokens)
     if tokens.length == 0
-      raise SyntaxError, 'Bad syntax.'
+      raise SyntaxError
     end
 
     token = tokens.slice!(0)
