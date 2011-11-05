@@ -12,26 +12,26 @@
 
 class Env < Hash
   @@globals = {
-    '+' => lambda do |*args|
+    '+' => lambda { |*args|
       sum = 0
       args.each { |x| sum += x }
       sum
-    end,
-    '-' => lambda do |x, *args|
+    },
+    '-' => lambda { |x, *args|
       diff = x
       args.each { |y| diff -= y }
       diff
-    end,
-    '*' => lambda do |*args|
+    },
+    '*' => lambda { |*args|
       prod = args.slice!(0)
       args.each { |x| prod *= x }
       prod
-    end,
-    '/' => lambda do |x, *args|
+    },
+    '/' => lambda { |x, *args|
       quot = x
       args.each { |y| quot /= y }
       quot
-    end,
+    },
     '>' => lambda { |x, y| x > y },
     '>=' => lambda { |x, y| x >= y },
     '<' => lambda { |x, y| x < y },
