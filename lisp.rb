@@ -6,12 +6,12 @@
 # TODO:
 #  * Create standard libs to clean up global scope
 #  * Floats are broked?
-#  * I think quotes are broked too.
 #
 # Author: @_ty
 
 class Env < Hash
   @@globals = {
+    # MATHS
     '+' => lambda { |*args|
       sum = 0
       args.each { |x| sum += x }
@@ -32,11 +32,19 @@ class Env < Hash
       args.each { |y| quot /= y }
       quot
     },
+    
+    # Comparisons 
     '>' => lambda { |x, y| x > y },
     '>=' => lambda { |x, y| x >= y },
     '<' => lambda { |x, y| x < y },
     '<=' => lambda { |x, y| x <= y },
     '=' => lambda { |x, y| x == y },
+    
+    # Types
+    'true' => true,
+    'false' => false,
+    'null' => nil,
+    
     'equal?' => lambda { |x, y| @@globals['='].call(x, y) },
     'null?' => lambda { |x| x.nil? },
     'car' => lambda { |x| x[0] },
@@ -45,10 +53,9 @@ class Env < Hash
     'rest' => lambda{ |x| @@globals['cdr'].call(x) },
     'cons' => lambda { |x, y| x + y },
     'last' => lambda { |x| x[-1] },
+    'list' => lambda { |*args| args.to_a },
+    'list?' => lambda { |x| x.is_a? Array },
     'length' => lambda { |x| x.length }, 
-    'true' => true,
-    'false' => false,
-    'null' => nil
   }
   
   def initialize(params=[], args=[], outer=nil)
