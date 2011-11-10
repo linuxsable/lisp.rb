@@ -46,14 +46,25 @@ class Env < Hash
     'null' => nil,
     
     'equal?' => lambda { |x, y| @@globals['='].call(x, y) },
-    'null?' => lambda { |x| x.nil? },
-    'car' => lambda { |x| x[0] },
+    'null?' => lambda { |x|
+      if x.is_a? Array
+        x.empty?
+      else
+        x.nil?
+      end
+    },
+    'car' => lambda { |x| x.first },
     'first' => lambda{ |x| @@globals['car'].call(x) },
-    'cdr' => lambda { |x| x[1..-1] },
+    'cdr' => lambda { |x| x.drop(1) },
     'rest' => lambda{ |x| @@globals['cdr'].call(x) },
-    'cons' => lambda { |x, y| x + y },
+    'cons' => lambda { |x, y| 
+      n = []
+      n.push(x)
+      y.each { |s| n.push(s) }
+      n
+    },
     'last' => lambda { |x| x[-1] },
-    'list' => lambda { |*args| args.to_a },
+    'list' => lambda { |*args| return [] if args.empty?; return args.to_a },
     'list?' => lambda { |x| x.is_a? Array },
     'length' => lambda { |x| x.length }, 
   }
