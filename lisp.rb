@@ -39,11 +39,16 @@ class Env < Hash
     '=' => lambda { |x, y| x == y },
     'equal?' => lambda { |x, y| @@globals['='].call(x, y) },
     'null?' => lambda { |x| x.nil? },
-    'nil?' => lambda { |x| x.nil? },
+    'car' => lambda { |x| x[0] },
+    'first' => lambda{ |x| @@globals['car'].call(x) },
+    'cdr' => lambda { |x| x[1..-1] },
+    'rest' => lambda{ |x| @@globals['cdr'].call(x) },
+    'cons' => lambda { |x, y| x + y },
+    'last' => lambda { |x| x[-1] },
+    'length' => lambda { |x| x.length }, 
     'true' => true,
     'false' => false,
-    'null' => nil,
-    'nil' => nil
+    'null' => nil
   }
   
   def initialize(params=[], args=[], outer=nil)
