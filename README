@@ -1,24 +1,57 @@
-USAGE
---
-ty:lisp.rb linuxsable$ ruby lisp.rb 
+Usage
+
+[~/Software/lisp.rb > master]$ ruby lisp.rb 
 
 lisp.rb> (define square (lambda (r) (* r r)))
-#<Proc:0x0000010081cf30@lisp.rb:159 (lambda)>
+ => #<Proc:0x007f9a53110e78@lisp.rb:146 (lambda)>
 
 lisp.rb> (square 10)
-100
+ => 100
 
 lisp.rb> (define list-square (lambda (lst) (if (null? lst) lst (cons (square (car lst)) (list-square (cdr lst))))))
-#<Proc:0x00000100824a28@lisp.rb:159 (lambda)>
+ => #<Proc:0x007f9a5381bd30@lisp.rb:146 (lambda)>
 
 lisp.rb> (list-square (list 1 2 3 4 5 6))
-[1, 4, 9, 16, 25, 36]
+ => [1, 4, 9, 16, 25, 36]
+
+lisp.rb> (map square (list 1 2 3 4 5 6))
+ => [1, 4, 9, 16, 25, 36]
 
 lisp.rb> (define fact (lambda (n) (if (<= n 1) 1 (* n (fact (- n 1))))))
-#<Proc:0x000001008435e0@lisp.rb:159 (lambda)>
+ => #<Proc:0x007f9a5302adb0@lisp.rb:146 (lambda)>
 
-lisp.rb> (fact 20)
-2432902008176640000
+lisp.rb> (map fact (list 2 4 6 8))
+ => [2, 24, 720, 40320]
+
+lisp.rb> (env)
+#+
+#-
+#*
+#/
+#>
+#>=
+#<
+#<=
+#=
+true
+false
+null
+#equal?
+#null?
+#car
+#first
+#cdr
+#rest
+#cons
+#last
+#list
+#list?
+#length
+#map
+#reduce
+#square
+#list-square
+#fact
 
 lisp.rb> quit
 Goodbye, cruel world.
