@@ -10,28 +10,12 @@
 # Author: @_ty
 
 class Env < Hash
-  @@globals = {
+  GLOBALS = {
     # MATHS
-    '+' => lambda { |*args|
-      sum = 0
-      args.each { |x| sum += x }
-      sum
-    },
-    '-' => lambda { |x, *args|
-      diff = x
-      args.each { |y| diff -= y }
-      diff
-    },
-    '*' => lambda { |*args|
-      prod = args.slice!(0)
-      args.each { |x| prod *= x }
-      prod
-    },
-    '/' => lambda { |x, *args|
-      quot = x
-      args.each { |y| quot /= y }
-      quot
-    },
+    '+' => lambda { |*args| args.reduce(:+) },
+    '-' => lambda { |*args| args.reduce(:-) },
+    '*' => lambda { |*args| args.reduce(:*) },
+    '/' => lambda { |*args| args.reduce(:/) },
     
     # Comparisons 
     '>' => lambda { |x, y| x > y },
@@ -45,7 +29,7 @@ class Env < Hash
     'false' => false,
     'null' => nil,
     
-    'equal?' => lambda { |x, y| @@globals['='].call(x, y) },
+    'equal?' => lambda { |x, y| GLOBALS['='].call(x, y) },
     'null?' => lambda { |x|
       if x.is_a? Array
         x.empty?
@@ -54,9 +38,9 @@ class Env < Hash
       end
     },
     'car' => lambda { |x| x.first },
-    'first' => lambda{ |x| @@globals['car'].call(x) },
+    'first' => lambda{ |x| GLOBALS['car'].call(x) },
     'cdr' => lambda { |x| x.drop(1) },
-    'rest' => lambda{ |x| @@globals['cdr'].call(x) },
+    'rest' => lambda{ |x| GLOBALS['cdr'].call(x) },
     'cons' => lambda { |x, y| 
       n = []
       n.push(x)
@@ -67,6 +51,9 @@ class Env < Hash
     'list' => lambda { |*args| return [] if args.empty?; return args.to_a },
     'list?' => lambda { |x| x.is_a? Array },
     'length' => lambda { |x| x.length }, 
+    # Map and Reduce dont' work yet
+    'map' => lambda { |f, set| set.map { |x| f.call(x) } },
+    'reduce' => lambda { |f, initial, set| set.reduce(initial) { |x| f.call(x) } }
   }
   
   def initialize(params=[], args=[], outer=nil)
@@ -102,7 +89,7 @@ class Env < Hash
   private
 
   def merge_globals
-    self.merge!(@@globals)
+    self.merge!(GLOBALS)
   end
 end
 
@@ -185,7 +172,7 @@ class Lisp
   # Read an expression from a sequence of tokens
   def read_from(tokens)
     if tokens.length == 0
-      raise SyntaxError
+      raise SyntaxError, 'Forgot something?'
     end
 
     token = tokens.slice!(0)
@@ -235,7 +222,7 @@ class Lisp
       begin
         evaled = self.eval(self.parse(line))
         if not evaled.nil?
-          p evaled
+          puts " => #{evaled}"
         end
       rescue Exception => e
         puts e
