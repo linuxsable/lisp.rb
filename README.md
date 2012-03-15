@@ -60,7 +60,7 @@ A small lisp interpeter in Ruby… for personal edification and play only.
     lisp.rb> quit
     Goodbye, cruel world.
     
-## TODO
+### TODO
 
 * Able to interpret files instead of just a REPL
 * REPL history
